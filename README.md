@@ -16,4 +16,4 @@ Binary classification with deep learning using TensorFlow
     * Implementation of the DL model
 
 
-*The code is still specific to a particular usecase*
+*The code is currently specific to a particular usecase*
