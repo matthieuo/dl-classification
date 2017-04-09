@@ -8,3 +8,5 @@ install:
   - pip install tensorflow
 # command to run tests
 #script: pytest
+notifications:
+  email: false
