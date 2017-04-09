@@ -20,7 +20,8 @@ To create a classifier by training a deep neural network:
 
 In with `-paths` contains the training set, `-nc` controls the number of classes, `-reg` controls the L2 regularization factor, `-dp` controls the dropout value. 
 
-A new directory is created on the `-bp` directory named with the training parameter plus the `-s` string. This directory contains metrics for tensorboard and the trained models.
+A new directory is created on the `-bp` directory named with the training parameter plus the `-s` string. This directory contains the trained models and some metrics for tensorboard.
+
 
 It's possible to test the trained models on a test set. The test set's directory should be organized like the train set directory.
 

@@ -1,4 +1,4 @@
-#    binary-classification
+#    dl-classification
 #    Copyright (C) 2017  Matthieu Ospici
 #
 #    This program is free software: you can redistribute it and/or modify
