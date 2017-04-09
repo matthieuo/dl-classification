@@ -20,7 +20,6 @@ import os
 import numpy as np
 from scipy import misc
 
-FLAGS = tf.app.flags.FLAGS
 
 
 def random_rotate_image(image):
@@ -29,51 +28,25 @@ def random_rotate_image(image):
     return misc.imrotate(image, angle, 'bicubic')
 
 
-def read_labeled_image_list_jpeg(file_json,prefix):
+def read_labeled_image_list_jpeg(data_paths,ftl):
     #create lists with the filenames and the labels. Classes are balanced
 
-    with open(file_json) as data_file:
-        data = json.load(data_file)
 
+    filenames_path = []
 
-    l_f = []
-    l_oth = []
+    for dire in data_paths:
+        for root, _ , files in os.walk(dire, topdown=False):
+            filenames_path += [os.path.join(root, name_f) for name_f in files]
 
-    for d in data:
-        _, file_extension = os.path.splitext(os.path.join(prefix,d["name"]))
-
-        if file_extension == ".png":continue
-
-        find_t = False
-        for bo in  d["boxes"]:
-            if bo["id"] == "939030726152341c154ba28629341da6_train": #tomato id
-
-                find_t = True
-        if find_t:
-
-            for _ in range(12):  #to balance the training /test set
-                l_f.append(os.path.join(prefix,d["name"]))
-            
-        else:
-            l_oth.append(os.path.join(prefix,d["name"]))
-
-
-        
-
-
-    filenames_path = l_f
-    labels = [1]*len(l_f)
-    filenames_path += l_oth
-    labels += [0]*len(l_oth)
-   
-    # we let tensorflow randomly picking the batches from the lists
-    
+    print("Files enumeration done")
+    labels = [ftl.to_label(fp) for fp in filenames_path]
+    print("Labels generation done",len(filenames_path),len(labels))
     return  filenames_path, labels
 
 
 
-def create_batch_from_files(json_f,prefix,l_img_size,chan_num,data_aug = False):
-    image_list, label_list = read_labeled_image_list_jpeg(json_f,prefix)
+def create_batch_from_files(data_paths,l_img_size,chan_num,batch_size,ftl,data_aug = False):
+    image_list, label_list = read_labeled_image_list_jpeg(data_paths,ftl)
 
     label_list = tf.convert_to_tensor(label_list, dtype=tf.int32)
 
@@ -107,8 +80,8 @@ def create_batch_from_files(json_f,prefix,l_img_size,chan_num,data_aug = False):
     read_threads = 10
     example_list = [(image,label,raw_files)  for _ in range(read_threads)]
 
-    batch_size=FLAGS.batch_size
-    min_after_dequeue = 15000
+    batch_size=batch_size
+    min_after_dequeue = 1000
     capacity = min_after_dequeue + 3 * batch_size
 
     #batch are randomly created

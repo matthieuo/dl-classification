@@ -20,181 +20,256 @@ import time
 import sys
 import os
 import argparse
+import subprocess
 
 import numpy as np 
 
 import models
+import utils
 
 from load_images import create_batch_from_files
 from sklearn import metrics
 
-###### PARSE ARGUMENTS ###
-parser = argparse.ArgumentParser()
+def manage_test_process(queue,f,cpopen):
+    if queue:
+        if cpopen is not None:
+            if cpopen.poll() is None:
+                return cpopen #not finish
+            
+        print("OK create new process")
 
-group_genera = parser.add_argument_group('General options')
 
+        my_env = os.environ.copy()
+        my_env["CUDA_VISIBLE_DEVICES"] = "" #test  on CPU
 
-group_genera.add_argument("-path", "--data-path", help="Path to the data to load",required=True)
+        argument = queue.pop()
+        popen = subprocess.Popen(argument,stdout=f, stderr=f,env=my_env)
+        return popen
+    else:
+        return cpopen
+    
 
-group_train = parser.add_argument_group('Train control')
 
+def train_model(reg_fact,
+                dp_val,
+                max_steps,
+                data_paths,
+                output_path,
+                batch_size,
+                test_path,
+                num_classes,
+                ftl):
 
 
-group_train.add_argument("-dp", "--dropout", help="Dropout value, 1 = no dropout",type=float,required=True)
-group_train.add_argument("-reg", "--reg-fact", help="Regularization",type=float,required=True)
-group_train.add_argument("-bp", "--base_path", help="Base path for log",required=True)
 
-args = parser.parse_args()
+    
+    with tf.device('/cpu:0'): #data augmentation on CPU to increase perf
+        x,label_batch,_ = create_batch_from_files(data_paths,[200,200],3,batch_size,ftl,True)
 
-data_path = args.data_path
+    pred_label = models.foodv_test(x,num_classes,reg_val=reg_fact,is_train=True,dropout_p = dp_val)
 
-if(args.dropout == 1):
-    dp_str = "No"
-    dropout_f = False
-else:
-    dp_str = str(args.dropout)
-    dropout_f = True
 
+    print(pred_label)
 
-output_dir = "_dp_" + dp_str + "_rf_"+str(args.reg_fact)
+    assert num_classes == ftl.curr_class,"Number of classes found on datasets are not equal to the number of classes given"
 
-output_path = os.path.join(args.base_path,output_dir)
+    if tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES):
+        reg_losses = tf.add_n(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
+    else:
+        reg_losses = 0.0
 
 
-print(output_path)
+    cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=pred_label,
+                                                                   labels=label_batch,
+                                                                   name='cross_entropy')
 
-print("++++ data path   : ",data_path)
-print("---- output path : ",output_path)
 
+    #global loss with the cross entropy and the L2 reg
+    loss =  reg_losses + cross_entropy
 
-FLAGS = tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string('train_dir', output_path,
-                           """Directory where to write event logs """
-                           """and checkpoint.""")
-tf.app.flags.DEFINE_integer('max_steps', 50000000,
-                            """Number of batches to run.""")
+    correct_prediction = tf.equal(tf.cast(tf.argmax(pred_label,1),tf.int32), label_batch)
+    accuracy_class = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-tf.app.flags.DEFINE_integer('batch_size',64,"""batch size""")
-tf.app.flags.DEFINE_float('dropout',args.dropout,"""dropout""")
 
+    prediction_label = tf.argmax(pred_label,1)
 
-reg_fact = args.reg_fact
 
-## END PARSE ARGS ####
+    tf.summary.scalar("acc_class", accuracy_class)
 
+    train_operations = tf.train.AdamOptimizer(1e-4).minimize(loss)
 
-print("Configuration resume")
+    # Create a saver.
+    saver = tf.train.Saver(tf.global_variables())
 
-print("reg fact = ",reg_fact)
-print("dropout = ", dp_str)
-print("output = ",output_path)
 
-train_val = True
 
-with tf.device('/cpu:0'): #data augmentation on CPU to increase perf
-    x,label_batch,_ = create_batch_from_files('doc/technical_test/train_database.txt',data_path,[200,200],3,True)
+    summary_op = tf.summary.merge_all() # for tensorboard
 
-pred_label = models.foodv_test(x,reg_val=reg_fact,is_train=train_val,dropout_p = args.dropout)
 
 
+    init_op = tf.global_variables_initializer()
 
-if tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES):
-    reg_losses = tf.add_n(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
-else:
-    reg_losses = 0.0
 
 
-cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=pred_label,
-                                                               labels=label_batch,
-                                                               name='cross_entropy')
 
 
-#global loss with the cross entropy and the L2 reg
-loss =  reg_losses + cross_entropy
+    with tf.Session() as sess:
 
+        sess.run(init_op)
 
-correct_prediction = tf.equal(tf.cast(tf.argmax(pred_label,1),tf.int32), label_batch)
-accuracy_class = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 
-prediction_label = tf.argmax(pred_label,1)
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(sess=sess,coord=coord)
 
 
-tf.summary.scalar("acc_class", accuracy_class)
 
-train_operations = tf.train.AdamOptimizer(1e-4).minimize(loss)
+        summary_writer = tf.summary.FileWriter(output_path, sess.graph)
 
-# Create a saver.
-saver = tf.train.Saver(tf.global_variables())
 
+        test_process_queue = []
+        curr_popen = None
+    
+        with open(output_path + "/eval_model_output.log", 'a') as log_file:
+            for step in range(max_steps):
 
 
-summary_op = tf.summary.merge_all() # for tensorboard
 
-
-
-init_op = tf.global_variables_initializer()
-
-
-
-
-
-with tf.Session() as sess:
-
-    sess.run(init_op)
-
-
-
-    coord = tf.train.Coordinator()
-    threads = tf.train.start_queue_runners(sess=sess,coord=coord)
-
-
-
-    summary_writer = tf.summary.FileWriter(FLAGS.train_dir, sess.graph)
-
-
-    for step in range(FLAGS.max_steps):
-            start_time = time.time()
+                curr_popen = manage_test_process(test_process_queue,log_file,curr_popen)
+                
+                start_time = time.time()
  
-            __ = sess.run(train_operations)
+                _ = sess.run(train_operations)
         
         
-            duration = time.time() - start_time
+                duration = time.time() - start_time
       
         
-            if step % 100 == 0:
-                num_examples_per_step = FLAGS.batch_size
-                examples_per_sec = num_examples_per_step / duration
-                sec_per_batch = float(duration)
-
-                format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
-                              'sec/batch)')
-                print (format_str % (datetime.now(), step, -1,
-                                     examples_per_sec, sec_per_batch))
+                if step % 100 == 0:
+                    num_examples_per_step = batch_size
+                    examples_per_sec = num_examples_per_step / duration
+                    sec_per_batch = float(duration)
+                    
+                    format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
+                                  'sec/batch)')
+                    print (format_str % (datetime.now(), step, -1,
+                                         examples_per_sec, sec_per_batch))
             
-                print("wrote sumary op")
+                    print("wrote sumary op")
                
             
-                sum_op,ac,lb,pb = sess.run([summary_op,accuracy_class,label_batch,prediction_label])
+                    sum_op,ac,lb,pb = sess.run([summary_op,accuracy_class,label_batch,prediction_label])
                 
 
-                print("ac ",ac)
-                print(lb)
-                print(pb)
+                    print("ac ",ac)
+                    print(lb)
+                    print(pb)
 
-                print(metrics.classification_report(lb,pb))
+                    print(metrics.classification_report(lb,pb))
 
 
-                summary_writer.add_summary(sum_op, step)
+                    summary_writer.add_summary(sum_op, step)
 
                 
-            if step % 1000 == 0 and  step > 0: #save a checkpoint every 1000 iterations
-                print("sav checkpoint")
-                checkpoint_path = os.path.join(FLAGS.train_dir, 'model.ckpt')
-                saver.save(sess, checkpoint_path, global_step=step)
-                print("done")
+                if step % 10000 == 0:# and  step > 0: #save a checkpoint and launch test every 1000 iterations
+                    print("sav checkpoint")
+                    checkpoint_path = os.path.join(output_path, 'model.ckpt')
+                    saver.save(sess, checkpoint_path, global_step=step)
+                    print("done")
 
+
+                    if test_path:
+                        #now launch test on different test sets !
+                        print("Enqueue evalution on test set")
+
+                        py_com = ['/home_nfs/ospicim/glibc-inst/lib/ld-linux-x86-64.so.2', '--library-path', '/usr/local/cuda-8.0/lib64:/home_nfs/ospicim/cudnn/cuda/lib64:/home_nfs/ospicim/glibc-inst/lib:/usr/lib64'\
+                                  , '/home_nfs/ospicim/anaconda3_4.2/bin/python3.5']
+                    
+                        tests = [('TEST' ,test_path)]
+              
+    
+                        for idt,path in tests:
+                            test_args = py_com +  ["./eval.py", "-paths",path,"-lp",output_path,"-ti",idt,'-nc',str(num_classes)]
                         
-    coord.request_stop()
-    coord.join(threads)
+                            test_process_queue.insert(0,test_args)
+                        
+            coord.request_stop()
+            coord.join(threads)
+
+
+
+
+
+
+if __name__ == '__main__':
+
+
+    parser = argparse.ArgumentParser()
+
+    group_genera = parser.add_argument_group('General options')
+
+
+    group_genera.add_argument("-paths", "--data-paths", help="Path to the data to load, can be comma separated",required=True)
+
+
+   
+    
+    group_train = parser.add_argument_group('Training control')
+
+
+    group_train.add_argument("-s", "--append-string", help="String to append to the log directory",required=True)
+    group_train.add_argument("-dp", "--dropout", help="Dropout value, 1 = no dropout",type=float,required=True)
+    group_train.add_argument("-reg", "--reg-fact", help="L2 regularization factor",type=float,required=True)
+    group_train.add_argument("-bp", "--base_path", help="Base path for log",required=True)
+    group_train.add_argument("-nc", "--num-classes", help="Number of classes on the training set", type=int,required=True)
+    group_train.add_argument("-bs", "--batch_size", help="Batch size",type=int,required=True)
+    group_train.add_argument("-tp", "--test_path", help="Path to the test set",required=False)
+    args = parser.parse_args()
+
+   
+    data_paths = args.data_paths.split(';')
+    num_classes = args.num_classes
+    reg_fact = args.reg_fact
+     
+    if(args.dropout == 1):
+        dp_str = "No"
+        dropout_f = False
+    else:
+        dp_str = str(args.dropout)
+        dropout_f = True
+
+
+    output_dir = "_reg_" + str(reg_fact) + "_cla_"+str(num_classes) + "_dp_"+dp_str+"_bs_"+str(args.batch_size) + "_str_"+args.append_string
+
+
+        
+    output_path = os.path.join(args.base_path,output_dir)
+
+
+    ftl = utils.file_to_label_binary()
+
+    
+    print("Configuration resume")
+
+    print("++++ data paths   : ",data_paths)
+    print("---- output path : ",output_path)
+
+    
+    print("reg fact = ",reg_fact)
+    print("dropout = ", dp_str)
+    print("output = ",output_path)
+    print("Batch size = ",args.batch_size)
+    print("Test path = ",args.test_path)
+    print("Number of classes = ",num_classes)
+
+    
+    train_model(reg_fact,
+                args.dropout,
+                30000,
+                data_paths,
+                output_path,
+                args.batch_size,
+                args.test_path,
+                num_classes,
+                ftl)

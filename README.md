@@ -1,6 +1,30 @@
-# binary-classification
-Binary classification with deep learning using TensorFlow
+# dl-classification
+This project allows you to create a multi-classes classifier for images with deep learning. The  [TensorFlow](http://www.tensorflow.org/) framework is used for the compuations.
 
+
+## Usage
+This project reads data from directories organized as follow:
+
+`data_train/classe1/[jpeg images from classe_1]
+          /classe2/[jpeg images from classe_2]
+          .....
+          /classen/[jpeg images from classe_n]`
+
+
+To create a classifier by training a deep neural network:
+
+`train.py -paths "data_train"  -nc 3  -reg 0.0001  -dp .4 -s "training1" -bp "OUTPUT_PATH" -bs 64` 
+
+In with `-paths` countains the training set, `-nc` controls the number of classes, `-reg` controls the L2 regularization factor, `-dp` controls the dropout value. 
+
+A new directory is created on the `-bp` directory named with the training parameter plus the `-s` string. This directory countains metrics for tensorboard and the trained models.
+
+It's possible to test the trained models directory organized like the train set.
+
+
+
+
+## Code organization
 
 * load_images.py
     * Initialization of the queues to load images and perform data augmentation
@@ -16,4 +40,4 @@ Binary classification with deep learning using TensorFlow
     * Implementation of the DL model
 
 
-*The code is currently specific to a particular usecase*
+

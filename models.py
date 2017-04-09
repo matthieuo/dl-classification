@@ -23,7 +23,7 @@ from initializers import weight_variable_xavier,bias_variable2
 
 
 
-def foodv_test(images,reg_val = 0.0,is_train=False,dropout_p = 1.0):
+def foodv_test(images,num_classes,reg_val = 0.0,is_train=False,dropout_p = 1.0):
   print("6convs, 200x200 input image")
   with tf.variable_scope('conv1') as scope:
     kernel = weight_variable_xavier([5, 5, 3, 48],reg_val)
@@ -156,8 +156,8 @@ def foodv_test(images,reg_val = 0.0,is_train=False,dropout_p = 1.0):
       h_fc1 = tf.nn.dropout(h_fc1, dropout_p)            
 
   with tf.variable_scope('fc2') as scope:
-    W_fc2 = weight_variable_xavier([size_last, 2],reg_val)
-    b_fc2 = bias_variable2([2])
+    W_fc2 = weight_variable_xavier([size_last, num_classes],reg_val)
+    b_fc2 = bias_variable2([num_classes])
 
     h_fc2 = tf.matmul(h_fc1, W_fc2) + b_fc2
 
