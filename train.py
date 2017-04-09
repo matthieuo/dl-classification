@@ -183,8 +183,7 @@ def train_model(reg_fact,
                         #now launch test on different test sets !
                         print("Enqueue evalution on test set")
 
-                        py_com = ['/home_nfs/ospicim/glibc-inst/lib/ld-linux-x86-64.so.2', '--library-path', '/usr/local/cuda-8.0/lib64:/home_nfs/ospicim/cudnn/cuda/lib64:/home_nfs/ospicim/glibc-inst/lib:/usr/lib64'\
-                                  , '/home_nfs/ospicim/anaconda3_4.2/bin/python3.5']
+                        py_com = ['python3']
                     
                         tests = [('TEST' ,test_path)]
               
