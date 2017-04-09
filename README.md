@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/matthieuo/dl-classification.svg?branch=master)](https://travis-ci.org/matthieuo/dl-classification)
+
+
 # dl-classification
 This project allows you to create a multi-classes classifier for images with deep learning. The  [TensorFlow](http://www.tensorflow.org/) framework is used for the computations.
  
