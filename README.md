@@ -21,15 +21,12 @@ To create a classifier by training a deep neural network:
 
 `train.py -paths "data_train"  -nc 3  -reg 0.0001  -dp .4 -s "training1" -bp "OUTPUT_PATH" -bs 64` 
 
-In with `-paths` contains the training set, `-nc` controls the number of classes, `-reg` controls the L2 regularization factor, `-dp` controls the dropout value. 
+In which `-paths` contains the training set, `-nc` controls the number of classes, `-reg` controls the L2 regularization factor, `-dp` controls the dropout value. 
 
 A new directory is created on the `-bp` directory named with the training parameter plus the `-s` string. This directory contains the trained models and some metrics for tensorboard.
 
 
-It's possible to test the trained models on a test set. The test set's directory should be organized like the train set directory.
-
-
-
+It's possible to test the trained models on a test set with the `-tp` option. The test set's directory should be organized like the train set directory.
 
 
 
