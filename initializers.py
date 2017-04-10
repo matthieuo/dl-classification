@@ -16,25 +16,21 @@
 
 
 import tensorflow as tf
-import numpy as np
 
 
 def bias_variable2(shape):
-  return tf.get_variable("biais2", shape,initializer=tf.constant_initializer(0.1))
+    return tf.get_variable(
+        "biais2",
+        shape,
+        initializer=tf.constant_initializer(0.1))
 
 
 # -- Xavier init with get_variable
-def weight_variable_xavier(shape,reg_val = 0.0):
-  W_xav = tf.get_variable("weight_xavier", shape,
-                          initializer = tf.contrib.layers.xavier_initializer(),
-                          regularizer = tf.contrib.layers.l2_regularizer(reg_val))
-  
-  return W_xav
+def weight_variable_xavier(shape, reg_val=0.0):
+    W_xav = tf.get_variable(
+        "weight_xavier",
+        shape,
+        initializer=tf.contrib.layers.xavier_initializer(),
+        regularizer=tf.contrib.layers.l2_regularizer(reg_val))
 
-
-  
-
-
-
-
-
+    return W_xav
