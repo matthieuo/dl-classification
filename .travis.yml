@@ -1,12 +1,10 @@
 language: python
 python:
-  - "3.2"
-  - "3.3"
-  - "3.4"
-# command to install dependencies
+  - "3.5"
 install:
+  - pip install numpy
+  - pip install matplotlib
   - pip install tensorflow
-# command to run tests
-#script: pytest
+script: py.test
 notifications:
   email: false
