@@ -9,7 +9,7 @@
 This project allows you to create a multiclass classifier for images with deep learning. The  [TensorFlow](http://www.tensorflow.org/) framework is used for the computations.
  
 ## Installation
-The necessary Python packages are listed on [requirments.txt](requirments.txt). Training a deep neural network is done with the `train.py` file.
+The necessary Python packages are listed on [requirements.txt](requirements.txt). Training a deep neural network is done with the `train.py` file.
 
 
 ## Usage
