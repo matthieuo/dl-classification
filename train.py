@@ -250,8 +250,7 @@ if __name__ == '__main__':
         dp_str = str(args.dropout)
         dropout_f = True
 
-    output_dir = "_reg_" + str(reg_fact) + "_cla_" + str(num_classes) + "_dp_" + \
-                 dp_str + "_bs_" + str(args.batch_size) + "_str_" + args.append_string
+    output_dir = "_reg_" + str(reg_fact) + "_cla_" + str(num_classes) + "_dp_" + dp_str + "_bs_" + str(args.batch_size) + "_str_" + args.append_string
 
     output_path = os.path.join(args.base_path, output_dir)
 
