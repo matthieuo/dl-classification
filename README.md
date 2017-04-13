@@ -1,19 +1,26 @@
-[![Build Status](https://travis-ci.org/matthieuo/dl-classification.svg?branch=master)](https://travis-ci.org/matthieuo/dl-classification)
+
 
 
 # dl-classification
-This project allows you to create a multiclasses classifier for images with deep learning. The  [TensorFlow](http://www.tensorflow.org/) framework is used for the computations.
+
+[![Build Status](https://travis-ci.org/matthieuo/dl-classification.svg?branch=master)](https://travis-ci.org/matthieuo/dl-classification)
+
+
+This project allows you to create a multiclass classifier for images with deep learning. The  [TensorFlow](http://www.tensorflow.org/) framework is used for the computations.
  
+## Installation
+The necessary Python packages are listed on `requirments.txt`. Training a deep neural network is done with the `train.py` file.
+
 
 ## Usage
 This project reads data from directories organized as follow:
 
 
 ```
-data_train/classe1/[jpeg images from classe_1]
-          /classe2/[jpeg images from classe_2]
+data_train/class_1/[jpeg images from class_1]
+          /class_2/[jpeg images from class_2]
           .....
-          /classen/[jpeg images from classe_n]
+          /class_n/[jpeg images from class_n]
 ```
 
 
@@ -22,6 +29,9 @@ To create a classifier by training a deep neural network:
 `train.py -paths "data_train"  -nc 3  -reg 0.0001  -dp .4 -s "training1" -bp "OUTPUT_PATH" -bs 64` 
 
 In which `-paths` contains the training set, `-nc` controls the number of classes, `-reg` controls the L2 regularization factor, `-dp` controls the dropout value. 
+
+
+*Note:* the number of classes set with the  `-nc` argument and the number of classes on the training set must be strictly identical.
 
 A new directory is created on the `-bp` directory named with the training parameter plus the `-s` string. This directory contains the trained models and some metrics for tensorboard.
 
